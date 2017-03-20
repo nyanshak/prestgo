@@ -91,7 +91,7 @@ func TestConfigParseDataSource(t *testing.T) {
 		},
 		{
 			ds:       "presto://name@example:9000/tree/birch?source=leaf&session=flower",
-			expected: config{"addr": "example:9000", "catalog": "tree", "schema": "birch", "user": "name", "source": "leaf", "session":"flower"},
+			expected: config{"addr": "example:9000", "catalog": "tree", "schema": "birch", "user": "name", "source": "leaf", "session": "flower"},
 			error:    false,
 		},
 	}
@@ -666,6 +666,126 @@ func TestTimestampWithTimezoneConverter(t *testing.T) {
 
 	for _, tc := range testCases {
 		v, err := timestampWithTimezoneConverter(tc.val)
+
+		if tc.err == (err == nil) {
+			t.Errorf("%v: got error %v, wanted %v", tc.val, err, tc.err)
+		}
+
+		if !reflect.DeepEqual(v, tc.expected) {
+			t.Errorf("%v: got %v, wanted %v", tc.val, v, tc.expected)
+		}
+
+	}
+}
+
+func TestVarBinaryConverter(t *testing.T) {
+	testCases := []struct {
+		val      interface{}
+		expected driver.Value
+		err      bool
+	}{
+		{
+			val:      "AAAAAAAAAAAAAP//2V9/MQ==",
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 217, 95, 127, 49},
+			err:      false,
+		},
+		{
+			val:      "AAAAAAAAAAAAAP//2V9/MQ==InvalidBase64!",
+			expected: nil,
+			err:      true,
+		},
+		{
+			val:      1000.0,
+			expected: nil,
+			err:      true,
+		},
+		{
+			val:      nil,
+			expected: nil,
+			err:      false,
+		},
+	}
+
+	for _, tc := range testCases {
+		v, err := varbinaryConverter(tc.val)
+
+		if tc.err == (err == nil) {
+			t.Errorf("%v: got error %v, wanted %v", tc.val, err, tc.err)
+		}
+
+		if !reflect.DeepEqual(v, tc.expected) {
+			t.Errorf("%v: got %v, wanted %v", tc.val, v, tc.expected)
+		}
+	}
+}
+
+func TestMapVarcharConverter(t *testing.T) {
+	testCases := []struct {
+		val      interface{}
+		expected driver.Value
+		err      bool
+	}{
+		{
+			val:      map[string]interface{}{"testKey": "testVal"},
+			expected: map[string]string{"testKey": "testVal"},
+			err:      false,
+		},
+		{
+			val:      "InvalidMap",
+			expected: nil,
+			err:      true,
+		},
+		{
+			val:      nil,
+			expected: nil,
+			err:      false,
+		},
+	}
+
+	for _, tc := range testCases {
+		v, err := mapVarcharConverter(tc.val)
+
+		if tc.err == (err == nil) {
+			t.Errorf("%v: got error %v, wanted %v", tc.val, err, tc.err)
+		}
+
+		if !reflect.DeepEqual(v, tc.expected) {
+			t.Errorf("%v: got %v, wanted %v", tc.val, v, tc.expected)
+		}
+
+	}
+}
+
+func TestArrayVarcharConverter(t *testing.T) {
+	testCases := []struct {
+		val      interface{}
+		expected driver.Value
+		err      bool
+	}{
+		{
+			val:      []interface{}{"testVal1", "testVal2"},
+			expected: []string{"testVal1", "testVal2"},
+			err:      false,
+		},
+		{
+			val:      []interface{}{1, 2},
+			expected: nil,
+			err:      true,
+		},
+		{
+			val:      "InvalidArray",
+			expected: nil,
+			err:      true,
+		},
+		{
+			val:      nil,
+			expected: nil,
+			err:      false,
+		},
+	}
+
+	for _, tc := range testCases {
+		v, err := arrayVarcharConverter(tc.val)
 
 		if tc.err == (err == nil) {
 			t.Errorf("%v: got error %v, wanted %v", tc.val, err, tc.err)
