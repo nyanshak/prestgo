@@ -1,8 +1,10 @@
 package prestgo
 
 import (
+	"bytes"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
